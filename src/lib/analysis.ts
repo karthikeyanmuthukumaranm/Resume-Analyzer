@@ -245,3 +245,107 @@ export async function analyzeGitHubProfile(githubUrl: string) {
     totalCommits: 1247
   };
 }
+
+// Salary Estimation Algorithm
+export function estimateSalary(resumeText: string, jobTitle: string, location: string = "Global"): { 
+  estimated: number; 
+  range: { min: number; max: number }; 
+  factors: string[];
+  breakdown: { base: number; skills: number; experience: number; location: number };
+} {
+  const skills = extractSkills(resumeText);
+  
+  // Base salary by job title (in thousands)
+  const baseSalaries: { [key: string]: number } = {
+    'software engineer': 85,
+    'senior software engineer': 110,
+    'full stack developer': 90,
+    'frontend developer': 80,
+    'backend developer': 95,
+    'data scientist': 105,
+    'devops engineer': 100,
+    'product manager': 120,
+    'engineering manager': 140,
+    'tech lead': 130
+  };
+  
+  // Skill premiums (in thousands)
+  const skillPremiums: { [key: string]: number } = {
+    'react': 8, 'angular': 7, 'vue': 6,
+    'node.js': 10, 'python': 12, 'java': 9,
+    'aws': 15, 'azure': 12, 'kubernetes': 18,
+    'machine learning': 25, 'ai': 30,
+    'blockchain': 35, 'golang': 20
+  };
+  
+  // Experience multipliers based on keywords in resume
+  const experienceKeywords = resumeText.toLowerCase();
+  let experienceMultiplier = 1.0;
+  
+  if (experienceKeywords.includes('senior') || experienceKeywords.includes('lead')) {
+    experienceMultiplier = 1.3;
+  } else if (experienceKeywords.includes('junior') || experienceKeywords.includes('entry')) {
+    experienceMultiplier = 0.7;
+  }
+  
+  // Calculate years of experience (rough estimation)
+  const yearMatches = resumeText.match(/(\d+)\+?\s*year/gi);
+  const maxYears = yearMatches ? Math.max(...yearMatches.map(m => parseInt(m))) : 2;
+  const experienceBonus = Math.min(maxYears * 5, 50); // Max 50k bonus
+  
+  // Base calculation
+  const titleKey = jobTitle.toLowerCase();
+  const baseForTitle = Object.keys(baseSalaries).find(key => 
+    titleKey.includes(key)
+  );
+  const baseSalary = baseForTitle ? baseSalaries[baseForTitle] : 85;
+  
+  // Skills bonus
+  const skillsBonus = skills.reduce((total, skill) => {
+    return total + (skillPremiums[skill.toLowerCase()] || 0);
+  }, 0);
+  
+  // Location adjustments (simplified)
+  const locationMultipliers: { [key: string]: number } = {
+    'san francisco': 1.4, 'new york': 1.3, 'seattle': 1.25,
+    'london': 1.2, 'toronto': 1.1, 'berlin': 1.05,
+    'global': 1.0, 'remote': 1.1
+  };
+  
+  const locationKey = location.toLowerCase();
+  const locationMultiplier = Object.keys(locationMultipliers).find(key => 
+    locationKey.includes(key)
+  );
+  const locMultiplier = locationMultiplier ? locationMultipliers[locationMultiplier] : 1.0;
+  
+  // Final calculation
+  const adjustedBase = baseSalary * experienceMultiplier;
+  const totalSkillsBonus = skillsBonus * locMultiplier;
+  const experienceBonusAdjusted = experienceBonus * locMultiplier;
+  const locationBonus = (adjustedBase * locMultiplier) - adjustedBase;
+  
+  const estimated = Math.round((adjustedBase + totalSkillsBonus + experienceBonusAdjusted + locationBonus) * 1000);
+  
+  // Generate factors that influenced the salary
+  const factors = [];
+  if (experienceMultiplier > 1.1) factors.push("Senior experience level (+30%)");
+  if (experienceMultiplier < 0.9) factors.push("Entry level experience (-30%)");
+  if (skillsBonus > 20) factors.push("High-demand skills premium");
+  if (locMultiplier > 1.1) factors.push(`${location} location premium (+${Math.round((locMultiplier-1)*100)}%)`);
+  if (maxYears > 5) factors.push(`${maxYears}+ years experience`);
+  
+  return {
+    estimated,
+    range: {
+      min: Math.round(estimated * 0.85),
+      max: Math.round(estimated * 1.25)
+    },
+    factors,
+    breakdown: {
+      base: Math.round(adjustedBase * 1000),
+      skills: Math.round(totalSkillsBonus * 1000),
+      experience: Math.round(experienceBonusAdjusted * 1000),
+      location: Math.round(locationBonus * 1000)
+    }
+  };
+}

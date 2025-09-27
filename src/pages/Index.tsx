@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileUpload } from "@/components/ui/file-upload";
 import { AnalysisDashboard } from "@/components/AnalysisDashboard";
 import { Badge } from "@/components/ui/badge";
+import Navigation from "@/components/Navigation";
 import { 
   Bot, 
   Upload, 
@@ -17,14 +18,16 @@ import {
   FileText,
   Globe,
   CheckCircle,
-  Loader2
+  Loader2,
+  DollarSign
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   analyzeResumeJobMatch, 
   calculateATSScore, 
   extractSkills, 
-  analyzeGitHubProfile 
+  analyzeGitHubProfile,
+  estimateSalary
 } from "@/lib/analysis";
 
 interface FormData {
@@ -134,6 +137,9 @@ const Index = () => {
       const jobSkills = extractSkills(formData.jobDescription);
       const githubData = await analyzeGitHubProfile(formData.githubUrl);
       
+      // Generate salary estimation
+      const salaryData = estimateSalary(mockResumeText, formData.jobTitle);
+      
       // Generate skills gap analysis
       const missingSkills = jobSkills.filter(skill => !resumeSkills.includes(skill));
       const presentSkills = resumeSkills.filter(skill => jobSkills.includes(skill));
@@ -150,6 +156,7 @@ const Index = () => {
       const result = {
         resumeJobMatch: matchResult.score,
         atsScore,
+        salaryEstimation: salaryData,
         skillsGap: {
           missing: missingSkills,
           present: presentSkills,
@@ -190,28 +197,25 @@ const Index = () => {
   if (analysisResult) {
     return (
       <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="border-b bg-card shadow-card">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-primary rounded-lg">
-                  <Bot className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-foreground">AI Resume Analyzer</h1>
-                  <p className="text-sm text-muted-foreground">Analysis Results</p>
-                </div>
-              </div>
-              <Button onClick={resetAnalysis} variant="outline">
-                Analyze New Resume
-              </Button>
-            </div>
-          </div>
-        </header>
-
+        <Navigation />
+        
         {/* Analysis Dashboard */}
         <main className="container mx-auto px-4 py-8">
+          <div className="mb-8 text-center animate-fade-in">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="p-3 bg-gradient-primary rounded-lg">
+                <Bot className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Analysis Complete</h1>
+                <p className="text-muted-foreground">Your comprehensive AI-powered resume analysis</p>
+              </div>
+            </div>
+            <Button onClick={resetAnalysis} variant="outline" className="hover-lift">
+              Analyze New Resume
+            </Button>
+          </div>
+          
           <AnalysisDashboard data={analysisResult} />
         </main>
       </div>
@@ -220,34 +224,41 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Navigation />
+      
       {/* Hero Header */}
-      <header className="bg-gradient-hero text-primary-foreground">
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="flex justify-center mb-6">
-              <div className="p-4 bg-white/10 rounded-full backdrop-blur-sm">
-                <Bot className="h-12 w-12" />
+      <header className="bg-gradient-hero text-primary-foreground relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+        <div className="container mx-auto px-4 py-20 relative z-10">
+          <div className="text-center max-w-5xl mx-auto">
+            <div className="flex justify-center mb-8 animate-bounce-gentle">
+              <div className="p-6 bg-white/10 rounded-full backdrop-blur-sm glass-effect">
+                <Bot className="h-16 w-16" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 font-heading">
+            <h1 className="text-4xl md:text-7xl font-bold mb-8 font-heading animate-fade-up">
               AI-Powered Resume Analyzer
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-primary-foreground/90">
+            <p className="text-xl md:text-2xl mb-8 text-primary-foreground/90 animate-fade-up" style={{animationDelay: "0.2s"}}>
               Get comprehensive insights with TF-IDF analysis, ATS compatibility scoring, 
-              and GitHub project verification
+              GitHub project verification, and salary estimation
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-4 py-2">
-                <Target className="h-4 w-4 mr-2" />
+            <div className="flex flex-wrap justify-center gap-4 animate-fade-up" style={{animationDelay: "0.4s"}}>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-6 py-3 hover-lift">
+                <Target className="h-5 w-5 mr-2" />
                 Resume-Job Matching
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-4 py-2">
-                <TrendingUp className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-6 py-3 hover-lift">
+                <TrendingUp className="h-5 w-5 mr-2" />
                 ATS Compatibility
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-4 py-2">
-                <GitBranch className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-6 py-3 hover-lift">
+                <GitBranch className="h-5 w-5 mr-2" />
                 GitHub Integration
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-6 py-3 hover-lift">
+                <DollarSign className="h-5 w-5 mr-2" />
+                Salary Estimation
               </Badge>
             </div>
           </div>
@@ -255,15 +266,15 @@ const Index = () => {
       </header>
 
       {/* Analysis Form */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-16 -mt-8 relative z-20">
         <div className="max-w-4xl mx-auto">
-          <Card className="shadow-professional">
+          <Card className="shadow-professional backdrop-blur-sm animate-scale-in">
             <CardHeader className="text-center pb-8">
-              <CardTitle className="text-2xl font-bold flex items-center justify-center gap-3">
-                <Sparkles className="h-6 w-6 text-primary" />
+              <CardTitle className="text-3xl font-bold flex items-center justify-center gap-3 gradient-text">
+                <Sparkles className="h-8 w-8 text-primary animate-pulse-glow" />
                 Start Your AI-Powered Analysis
               </CardTitle>
-              <p className="text-muted-foreground mt-2">
+              <p className="text-muted-foreground mt-4 text-lg">
                 Upload your resume and job details for comprehensive AI analysis using advanced NLP algorithms
               </p>
             </CardHeader>

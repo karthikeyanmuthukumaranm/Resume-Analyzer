@@ -25,12 +25,21 @@ import {
   AlertTriangle,
   Star,
   Users,
-  Calendar
+  Calendar,
+  DollarSign,
+  Award,
+  Briefcase
 } from "lucide-react";
 
 interface AnalysisData {
   resumeJobMatch: number;
   atsScore: number;
+  salaryEstimation: {
+    estimated: number;
+    range: { min: number; max: number };
+    factors: string[];
+    breakdown: { base: number; skills: number; experience: number; location: number };
+  };
   skillsGap: {
     missing: string[];
     present: string[];
@@ -55,12 +64,28 @@ interface AnalysisDashboardProps {
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
-  const { resumeJobMatch, atsScore, skillsGap, githubAnalysis, recommendations } = data;
+  const { resumeJobMatch, atsScore, salaryEstimation, skillsGap, githubAnalysis, recommendations } = data;
 
   const scoreData = [
     { name: 'Resume Match', value: resumeJobMatch, color: 'hsl(var(--primary))' },
     { name: 'ATS Score', value: atsScore, color: 'hsl(var(--accent))' }
   ];
+
+  const salaryBreakdownData = [
+    { name: 'Base Salary', value: salaryEstimation.breakdown.base, color: 'hsl(var(--chart-1))' },
+    { name: 'Skills Premium', value: salaryEstimation.breakdown.skills, color: 'hsl(var(--chart-2))' },
+    { name: 'Experience', value: salaryEstimation.breakdown.experience, color: 'hsl(var(--chart-3))' },
+    { name: 'Location', value: salaryEstimation.breakdown.location, color: 'hsl(var(--chart-4))' }
+  ].filter(item => item.value > 0);
+
+  const formatSalary = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-success';
@@ -75,10 +100,44 @@ export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
+      {/* Salary Estimation Hero Card */}
+      <Card className="shadow-professional bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20 animate-scale-in">
+        <CardHeader className="text-center pb-6">
+          <CardTitle className="text-2xl md:text-3xl font-bold flex items-center justify-center gap-3">
+            <DollarSign className="h-8 w-8 text-primary animate-pulse-glow" />
+            Estimated Salary Range
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center mb-6">
+            <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
+              {formatSalary(salaryEstimation.estimated)}
+            </div>
+            <div className="text-lg text-muted-foreground">
+              Range: {formatSalary(salaryEstimation.range.min)} - {formatSalary(salaryEstimation.range.max)}
+            </div>
+          </div>
+          
+          {salaryEstimation.factors.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-semibold text-center text-foreground">Factors Affecting Your Salary</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {salaryEstimation.factors.map((factor, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-card rounded-lg hover-lift">
+                    <Award className="h-5 w-5 text-success flex-shrink-0" />
+                    <span className="text-sm">{factor}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="shadow-card">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <Card className="shadow-card hover-lift animate-fade-in" style={{animationDelay: "0.1s"}}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
@@ -98,7 +157,7 @@ export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="shadow-card hover-lift animate-fade-in" style={{animationDelay: "0.2s"}}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-accent" />
@@ -118,7 +177,7 @@ export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="shadow-card hover-lift animate-fade-in" style={{animationDelay: "0.3s"}}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <GitBranch className="h-4 w-4 text-chart-3" />
@@ -141,7 +200,7 @@ export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="shadow-card hover-lift animate-fade-in" style={{animationDelay: "0.4s"}}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Code className="h-4 w-4 text-chart-5" />
@@ -165,17 +224,17 @@ export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Score Comparison Chart */}
-        <Card className="shadow-card">
+        <Card className="shadow-card hover-lift animate-fade-in" style={{animationDelay: "0.5s"}}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="h-5 w-5 text-primary" />
               Score Analysis
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={200}>
               <RadialBarChart data={scoreData} innerRadius="30%" outerRadius="80%">
                 <RadialBar dataKey="value" cornerRadius={10} fill={scoreData[0].color} />
                 <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
@@ -185,23 +244,23 @@ export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
         </Card>
 
         {/* Programming Languages Chart */}
-        <Card className="shadow-card">
+        <Card className="shadow-card hover-lift animate-fade-in" style={{animationDelay: "0.6s"}}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Code className="h-5 w-5 text-chart-2" />
               Programming Languages
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
                   data={githubAnalysis.languages}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
+                  innerRadius={40}
+                  outerRadius={80}
+                  paddingAngle={3}
                   dataKey="value"
                 >
                   {githubAnalysis.languages.map((entry, index) => (
@@ -211,17 +270,38 @@ export function AnalysisDashboard({ data }: AnalysisDashboardProps) {
                 <Tooltip formatter={(value) => [`${value}%`, 'Usage']} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-2 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-3">
               {githubAnalysis.languages.map((lang, index) => (
-                <div key={lang.name} className="flex items-center gap-2">
+                <div key={lang.name} className="flex items-center gap-2 text-xs">
                   <div 
-                    className="w-3 h-3 rounded-full" 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                   />
-                  <span className="text-sm">{lang.name}: {lang.value}%</span>
+                  <span className="truncate">{lang.name}: {lang.value}%</span>
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Salary Breakdown Chart */}
+        <Card className="shadow-card hover-lift animate-fade-in" style={{animationDelay: "0.7s"}}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <DollarSign className="h-5 w-5 text-success" />
+              Salary Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={salaryBreakdownData} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={80} fontSize={12} />
+                <Tooltip formatter={(value) => [formatSalary(Number(value)), 'Amount']} />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
