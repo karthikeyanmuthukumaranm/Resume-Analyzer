@@ -223,27 +223,133 @@ export function extractSkills(text: string): string[] {
   return [...new Set(foundSkills)]; // Remove duplicates
 }
 
-// Mock GitHub API Analysis (in real implementation, this would call GitHub API)
+// Real GitHub API Analysis
 export async function analyzeGitHubProfile(githubUrl: string) {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock data - in real implementation, this would fetch from GitHub API
-  return {
-    totalRepos: 24,
-    verifiedProjects: 8,
-    unverifiedProjects: ['E-commerce Dashboard', 'Mobile Banking App'], 
-    languages: [
-      { name: 'JavaScript', value: 45, color: '#f1e05a' },
-      { name: 'TypeScript', value: 25, color: '#2b7489' },
-      { name: 'Python', value: 15, color: '#3572A5' },
-      { name: 'CSS', value: 10, color: '#563d7c' },
-      { name: 'HTML', value: 5, color: '#e34c26' }
-    ],
-    recentActivity: true,
-    totalStars: 156,
-    totalCommits: 1247
-  };
+  try {
+    // Extract username from GitHub URL
+    const username = githubUrl.replace(/https?:\/\/(www\.)?github\.com\//, '').split('/')[0].trim();
+    
+    if (!username) {
+      throw new Error('Invalid GitHub URL');
+    }
+
+    // Fetch user data
+    const userResponse = await fetch(`https://api.github.com/users/${username}`);
+    if (!userResponse.ok) {
+      throw new Error('GitHub user not found');
+    }
+    const userData = await userResponse.json();
+
+    // Fetch repositories
+    const reposResponse = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`);
+    if (!reposResponse.ok) {
+      throw new Error('Failed to fetch repositories');
+    }
+    const repos = await reposResponse.json();
+
+    // Calculate language statistics
+    const languageStats: { [key: string]: number } = {};
+    let totalStars = 0;
+    let totalCommits = 0;
+    
+    for (const repo of repos) {
+      // Count stars
+      totalStars += repo.stargazers_count || 0;
+      
+      // Get language data
+      if (repo.language) {
+        languageStats[repo.language] = (languageStats[repo.language] || 0) + 1;
+      }
+      
+      // Get commit count for each repo (limited to avoid rate limiting)
+      try {
+        const commitsResponse = await fetch(`https://api.github.com/repos/${username}/${repo.name}/commits?per_page=1`);
+        if (commitsResponse.ok) {
+          const linkHeader = commitsResponse.headers.get('Link');
+          if (linkHeader) {
+            const match = linkHeader.match(/page=(\d+)>; rel="last"/);
+            if (match) {
+              totalCommits += parseInt(match[1]);
+            }
+          } else {
+            totalCommits += 1; // At least one commit
+          }
+        }
+      } catch (error) {
+        // Skip if rate limited or error
+        console.warn(`Could not fetch commits for ${repo.name}`);
+      }
+    }
+
+    // Convert language stats to percentages
+    const totalRepos = repos.length;
+    const languageColors: { [key: string]: string } = {
+      'JavaScript': '#f1e05a',
+      'TypeScript': '#2b7489',
+      'Python': '#3572A5',
+      'Java': '#b07219',
+      'C++': '#f34b7d',
+      'C': '#555555',
+      'C#': '#178600',
+      'PHP': '#4F5D95',
+      'Ruby': '#701516',
+      'Go': '#00ADD8',
+      'Swift': '#ffac45',
+      'Kotlin': '#F18E33',
+      'Rust': '#dea584',
+      'Dart': '#00B4AB',
+      'HTML': '#e34c26',
+      'CSS': '#563d7c',
+      'Shell': '#89e051',
+      'Vue': '#41b883',
+      'Jupyter Notebook': '#DA5B0B'
+    };
+
+    const languages = Object.entries(languageStats)
+      .map(([name, count]) => ({
+        name,
+        value: Math.round((count / totalRepos) * 100),
+        color: languageColors[name] || '#8b5cf6'
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5); // Top 5 languages
+
+    // Check for recent activity (repos updated in last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const recentActivity = repos.some((repo: any) => 
+      new Date(repo.updated_at) > sixMonthsAgo
+    );
+
+    // Get public repos from user data
+    const verifiedProjects = repos.filter((repo: any) => !repo.fork).length;
+    
+    // Identify unverified projects (projects mentioned but not found in GitHub)
+    // This would need resume text to compare, for now return empty array
+    const unverifiedProjects: string[] = [];
+
+    return {
+      totalRepos: repos.length,
+      verifiedProjects,
+      unverifiedProjects,
+      languages,
+      recentActivity,
+      totalStars,
+      totalCommits
+    };
+  } catch (error) {
+    console.error('GitHub analysis error:', error);
+    // Return minimal data on error
+    return {
+      totalRepos: 0,
+      verifiedProjects: 0,
+      unverifiedProjects: [],
+      languages: [],
+      recentActivity: false,
+      totalStars: 0,
+      totalCommits: 0
+    };
+  }
 }
 
 // Salary Estimation Algorithm
