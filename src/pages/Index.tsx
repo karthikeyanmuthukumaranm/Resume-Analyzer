@@ -29,6 +29,7 @@ import {
   analyzeGitHubProfile,
   estimateSalary
 } from "@/lib/analysis";
+import { parseResumeFile } from "@/lib/fileParser";
 
 interface FormData {
   jobTitle: string;
@@ -102,43 +103,22 @@ const Index = () => {
     setIsAnalyzing(true);
     
     try {
-      // Simulate reading resume file (in real app, would use proper file parsing)
-      const mockResumeText = `
-        Senior Software Engineer with 5+ years of experience in full-stack development.
-        
-        SKILLS:
-        - JavaScript, TypeScript, React, Node.js
-        - Python, Django, Flask
-        - AWS, Docker, Kubernetes
-        - MySQL, PostgreSQL, MongoDB
-        - Git, Jenkins, Agile methodologies
-        
-        EXPERIENCE:
-        Software Engineer at Tech Corp (2020-2024)
-        - Developed scalable web applications using React and Node.js
-        - Implemented microservices architecture on AWS
-        - Led team of 4 developers in agile environment
-        
-        PROJECTS:
-        - E-commerce Platform: Built full-stack React/Node.js application
-        - Data Analytics Dashboard: Created Python-based analytics platform
-        - Mobile Banking App: Developed React Native application
-        - Portfolio Website: Personal website showcasing projects
-        
-        EDUCATION:
-        Bachelor of Science in Computer Science
-        University of Technology (2016-2020)
-      `;
+      // Parse the uploaded resume file
+      const resumeText = await parseResumeFile(formData.resumeFile!);
+      
+      if (!resumeText || resumeText.trim().length < 50) {
+        throw new Error('Could not extract enough text from resume. Please ensure the file is readable.');
+      }
 
       // Perform AI analysis
-      const matchResult = analyzeResumeJobMatch(mockResumeText, formData.jobDescription);
-      const atsScore = calculateATSScore(mockResumeText);
-      const resumeSkills = extractSkills(mockResumeText);
+      const matchResult = analyzeResumeJobMatch(resumeText, formData.jobDescription);
+      const atsScore = calculateATSScore(resumeText);
+      const resumeSkills = extractSkills(resumeText);
       const jobSkills = extractSkills(formData.jobDescription);
       const githubData = await analyzeGitHubProfile(formData.githubUrl);
       
       // Generate salary estimation
-      const salaryData = estimateSalary(mockResumeText, formData.jobTitle);
+      const salaryData = estimateSalary(resumeText, formData.jobTitle);
       
       // Generate skills gap analysis
       const missingSkills = jobSkills.filter(skill => !resumeSkills.includes(skill));
